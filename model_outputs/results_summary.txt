@@ -1,0 +1,6 @@
+plain  train_mse 0.42106045980473755 | valid_mse 0.4049455284402379 | test_mse 0.41671082295434686
+minibatch_plain  train_mse 0.42078780894498824 | valid_mse 0.4063107120981717 | test_mse 0.41609454746073654
+l2  alpha 0.1 | train_mse 0.4226942380463888 | valid_mse 0.4043037010254558 | test_mse 0.41979826247729346
+plain_after_l2_drop  dropped_feature citric acid | train_mse 0.4217672950068436 | valid_mse 0.4037994420706724 | test_mse 0.41767321770767224
+l1  alpha 0.0 | train_mse 0.42106045980473755 | valid_mse 0.4049455284402379 | test_mse 0.41671082295434686
+plain_after_l1_drop  dropped_feature ['residual sugar'] | train_mse 0.42118388479068164 | valid_mse 0.40651975758177833 | test_mse 0.41744250687729084
