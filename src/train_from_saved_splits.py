@@ -5,28 +5,39 @@ I use the saved splits inside the outputs folder
 Run this from the repo root like  python src/train_from_saved_splits.py
 """
 
+#all team members have contributed in equal measure to this effort
+#krrish thakku suresh
+#Shawn Lasrado
+
 import json
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# basic settings
+# basic settings for making experiments reproducible 
 SEED = 42
+#learning rate
 LR = 1e-3
 EPOCHS = 4000
+#64 beacause of efficiency and tradition
 BATCH_SIZE = 64
 ALPHAS = [0.0, 1e-4, 1e-3, 1e-2, 5e-2, 1e-1]
-
+#to reproduce same results
 rng = np.random.default_rng(SEED)
+
+
 
 def read_y_csv(path):
     df = pd.read_csv(path)
-    # try to pick the target column
+    
+    #removing unnamed index coloumn which might be created when saving DF to csv
     drop_cols = [c for c in df.columns if str(c).lower().startswith("unnamed")]
     if drop_cols:
         df = df.drop(columns=drop_cols)
+
     cols_lower = [c.lower() for c in df.columns]
+
     if "quality" in cols_lower:
         real = [c for c in df.columns if c.lower() == "quality"][0]
         s = df[real]
@@ -79,14 +90,19 @@ def ensure_bias_and_standardize(Xtr_df, Xva_df, Xte_df):
     has_bias = ("bias" in Xtr_df.columns) or np.allclose(Xtr_df.iloc[:, 0].to_numpy(), 1.0)
     if has_bias:
         feat_cols = [c for c in Xtr_df.columns if c != "bias"]
+        
+        #mean
         mu = Xtr_df[feat_cols].mean(axis=0)
+        #std
         sigma = Xtr_df[feat_cols].std(axis=0).replace(0.0, 1.0)
+
         Xtr = Xtr_df.copy()
         Xva = Xva_df.copy()
         Xte = Xte_df.copy()
         Xtr[feat_cols] = (Xtr[feat_cols] - mu) / sigma
         Xva[feat_cols] = (Xva[feat_cols] - mu) / sigma
         Xte[feat_cols] = (Xte[feat_cols] - mu) / sigma
+
         feature_names = list(Xtr.columns)
     else:
         mu = Xtr_df.mean(axis=0)
@@ -94,19 +110,24 @@ def ensure_bias_and_standardize(Xtr_df, Xva_df, Xte_df):
         Xtr = (Xtr_df - mu) / sigma
         Xva = (Xva_df - mu) / sigma
         Xte = (Xte_df - mu) / sigma
+
+        #creating bias coloumns
         ones_tr = pd.Series(1.0, index=Xtr.index, name="bias")
         ones_va = pd.Series(1.0, index=Xva.index, name="bias")
         ones_te = pd.Series(1.0, index=Xte.index, name="bias")
+        
         Xtr = pd.concat([ones_tr, Xtr], axis=1)
         Xva = pd.concat([ones_va, Xva], axis=1)
         Xte = pd.concat([ones_te, Xte], axis=1)
         feature_names = list(Xtr.columns)
     return Xtr.to_numpy(float), Xva.to_numpy(float), Xte.to_numpy(float), feature_names
 
+#loss function
 def mse(y, yhat):
     e = yhat - y
     return float(np.mean(e * e))
 
+#matrix multiplication of multiplying matrix X with weights w
 def predict(X, w):
     return X @ w
 
@@ -117,9 +138,11 @@ def grad_mse(X, y, w):
 def batch_gd(X, y, lr=LR, epochs=EPOCHS, reg=None, alpha=0.0, reg_mask=None):
     m, n = X.shape
     w = np.zeros(n, dtype=float)
+
     if reg_mask is None:
         reg_mask = np.ones(n, dtype=float)
     hist = []
+
     for ep in range(epochs):
         g = grad_mse(X, y, w)
         if reg == "l2" and alpha > 0.0:
@@ -134,10 +157,12 @@ def batch_gd(X, y, lr=LR, epochs=EPOCHS, reg=None, alpha=0.0, reg_mask=None):
 def minibatch_gd(X, y, lr=LR, epochs=EPOCHS, batch=BATCH_SIZE, reg=None, alpha=0.0, reg_mask=None):
     m, n = X.shape
     w = np.zeros(n, dtype=float)
+
     if reg_mask is None:
         reg_mask = np.ones(n, dtype=float)
     steps = max(1, m // batch)
     hist = []
+
     for ep in range(epochs):
         idx = rng.permutation(m)
         Xp = X[idx]
@@ -162,6 +187,7 @@ def choose_alpha(train_fn, Xtr, ytr, Xva, yva, alphas, reg, reg_mask):
     best_v = float("inf")
     best_w = None
     rows = []
+
     for a in alphas:
         w, _ = train_fn(Xtr, ytr, reg=reg, alpha=a, reg_mask=reg_mask)
         val = mse(yva, predict(Xva, w))
@@ -206,6 +232,7 @@ def main():
     print("standardizing and adding bias if needed")
     Xtr, Xva, Xte, names = ensure_bias_and_standardize(Xtr_df, Xva_df, Xte_df)
 
+    #building reg mask, not penalizing bias 
     reg_mask = np.ones(len(names), dtype=float)
     if names[0] == "bias":
         reg_mask[0] = 0.0
@@ -222,7 +249,7 @@ def main():
         "test_mse": mse(yte, predict(Xte, w_plain)),
     }
     j_big, name_big = largest_feature(w_plain, names)
-    plot_line(Xtr, ytr, w_plain, j_big, name_big, f"batch plain feature {name_big}", str(out / "plot_batch_plain.png"))
+    plot_line(Xtr, , w_plain, j_big, name_big, f"batch plain feature {name_big}", str(out / "plot_batch_plain.png"))
 
     print("training mini batch plain")
     w_mini, h_mini = minibatch_gd(Xtr, ytr)
